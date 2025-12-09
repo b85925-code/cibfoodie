@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>學長，午餐吃什麼？</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- 字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Maps JS（搭配 Places New 使用） -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDsgevBWyNHGA7GJN9ENKINDRM2g5dBj1I&language=zh-TW&region=TW"></script>
+
+  <style>
+    :root {
+      --bg-card: rgba(255, 255, 255, 0.33);
+      --button-bg: rgba(255, 255, 255, 0.30);
+      --accent: #1f8ef1;
+      --text-main: #222;
+      --text-sub-dark: #333;
+      --border-soft: rgba(255, 255, 255, 0.45);
+      --bubble-bg: #c5f7a4; /* 類似 LINE 綠色泡泡 */
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", system-ui;
+      color: var(--text-main);
+      background: #000;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: url("background.jpg") center/cover no-repeat;
+      z-index: -2;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: -1;
+    }
+
+    header {
+      position: sticky; top: 0;
+      backdrop-filter: blur(18px);
+      background: rgba(15, 23, 42, 0.35);
+      padding: 12px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      font-size: 1.2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      z-index: 5;
+    }
+
+    .site-title { font-size: 1.1rem; font-weight: 700; }
+    .site-subtitle { font-size: 0.8rem; color: #e5e7eb; }
+
+    .btn-login {
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.6);
+      padding: 6px 14px;
+      background: rgba(15, 23, 42, 0.55);
+      font-size: 0.85rem;
+      color: #f9fafb;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-login:hover {
+      border-color: white;
+      background: rgba(15,23,42,0.8);
+    }
+
+    main {
+      padding: 24px 16px 40px;
+      max-width: 720px;
+      margin: auto;
+    }
+
+    .card, .restaurants-panel {
+      background: var(--bg-card);
+      padding: 20px;
+      border-radius: 24px;
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-soft);
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .button-group {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .meal-btn {
+      background: var(--button-bg);
+      border: 1px solid rgba(255,255,255,0.65);
+      padding: 10px 14px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      max-width: 260px;  /* 寬度貼文字 */
+      font-size: 0.95rem;
+    }
+
+    .restaurants-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    #restaurantsStatus {
+      font-size: 0.9rem;
+      margin: 6px 0 10px;
+      color: #fff;
+    }
+
+    /* ============ 商家預覽泡泡 ============ */
+
+    .place-bubble {
+      background: var(--bubble-bg);
+      border-radius: 16px;
+      padding: 8px 10px 10px;
+      margin-bottom: 12px;
+      position: relative;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    }
+
+    .place-bubble::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      bottom: -8px;
+      border-width: 8px 8px 0 0;
+      border-style: solid;
+      border-color: var(--bubble-bg) transparent transparent transparent;
+    }
+
+    .place-link-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      gap: 6px;
+    }
+
+    .place-link {
+      font-size: 0.8rem;
+      color: #005bb5;
+      text-decoration: underline;
+      word-break: break-all;
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .btn-copy {
+      border: none;
+      background: rgba(255,255,255,0.8);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .btn-copy:hover {
+      background: #fff;
+    }
+
+    .place-preview {
+      background: #fff;
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .place-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .place-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+      color: #222;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .place-address {
+      font-size: 0.78rem;
+      color: #555;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .place-meta {
+      font-size: 0.75rem;
+      color: #777;
+    }
+
+    .place-photo {
+      width: 68px;
+      height: 68px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #eee;
+    }
+
+    .btn-refresh {
+      margin-top: 10px;
+      background: var(--button-bg);
+      border: 1px solid rgba(255,255,255,0.65);
+      padding: 8px 14px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(255,255,255,0.8);
+    }
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <div class="site-title">學長，午餐吃什麼？</div>
+    <div class="site-subtitle">每天抉擇那麼多，要吃什麼交給我</div>
+  </div>
+  <button class="btn-login">登入</button>
+</header>
+
+<main>
+
+  <!-- 上：四顆按鈕 -->
+  <section class="card">
+    <div class="card-title">今天要吃什麼？（隨機推薦）</div>
+
+    <div class="button-group">
+      <button class="meal-btn" id="btnBreakfast">🌅 早餐吃什麼？</button>
+      <button class="meal-btn" id="btnLunch">🍱 午餐吃什麼？</button>
+      <button class="meal-btn" id="btnDinner">🌙 晚餐吃什麼？</button>
+      <button class="meal-btn" id="btnDuty">🚔 執行案件吃什麼？</button>
+    </div>
+  </section>
+
+  <!-- 下：每日精選預覽卡 -->
+  <section class="restaurants-panel">
+    <div class="restaurants-title">每日精選</div>
+    <div id="restaurantsStatus">正在載入附近店家…</div>
+    <div id="restaurantsList"></div>
+    <button id="btnRefresh" class="btn-refresh">重新抽店家</button>
+  </section>
+
+</main>
+
+<script>
+  const API_KEY = "AIzaSyDsgevBWyNHGA7GJN9ENKINDRM2g5dBj1I";
+  const CENTER = { lat: 25.042425, lng: 121.562487 };
+  const RADIUS_M = 500;
+
+  let PlaceAPI = null;
+  let currentMode = "normal"; // normal / duty
+
+  const statusEl = document.getElementById("restaurantsStatus");
+  const listEl = document.getElementById("restaurantsList");
+
+  function setStatus(msg, isError = false) {
+    statusEl.style.color = isError ? "#ff4d4f" : "#ffffff";
+    statusEl.textContent = msg;
+  }
+
+  function isDrink(place) {
+    const n = (place.displayName?.text || "").toLowerCase();
+    return ["飲料","奶茶","tea","coffee","咖啡","手搖"].some(k => n.includes(k));
+  }
+
+  function getTier(place) {
+    const lv = place.priceLevel;
+    if (lv === 0 || lv === 1) return "TIER_1";      // 0–200
+    if (lv === 2) return "TIER_2";                  // 200–400
+    if (lv === 3 || lv === 4) return "TIER_3";      // 400+
+    const rating = place.rating || 0;
+    if (rating >= 4.4) return "TIER_3";
+    if (rating >= 4.0) return "TIER_2";
+    return "TIER_1";
+  }
+
+  function tierLabel(tier) {
+    if (tier === "TIER_1") return "0–200 元";
+    if (tier === "TIER_2") return "200–400 元";
+    if (tier === "TIER_3") return "400 元以上";
+    return "未分類";
+  }
+
+  function buildMapsUrl(place) {
+    if (place.googleMapsUri) return place.googleMapsUri;
+    if (place.id) return `https://www.google.com/maps/place/?q=place_id:${place.id}`;
+    return "https://maps.google.com/";
+  }
+
+  function buildPhotoUrl(place) {
+    const photo = place.photos && place.photos[0];
+    if (!photo || !photo.name) return null;
+    const encodedName = encodeURIComponent(photo.name);
+    return `https://places.googleapis.com/v1/${encodedName}/media?key=${API_KEY}&maxWidthPx=300&maxHeightPx=300`;
+  }
+
+  async function searchNearbyPlaces() {
+    if (!PlaceAPI) throw new Error("Places API 尚未準備好");
+
+    const request = {
+      fields: [
+        "id",
+        "displayName",
+        "formattedAddress",
+        "googleMapsUri",
+        "priceLevel",
+        "rating",
+        "types",
+        "photos"
+      ],
+      locationRestriction: {
+        center: CENTER,
+        radius: RADIUS_M
+      },
+      includedPrimaryTypes: ["restaurant"],
+      isOpenNow: true,
+      language: "zh-TW",
+      maxResultCount: 60
+    };
+
+    const { places } = await PlaceAPI.searchNearby(request);
+    return (places || []).filter(p => !isDrink(p));
+  }
+
+  function randomPick(arr, count) {
+    const copy = [...arr];
+    const result = [];
+    while (copy.length && result.length < count) {
+      const idx = Math.floor(Math.random() * copy.length);
+      result.push(copy.splice(idx, 1)[0]);
+    }
+    return result;
+  }
+
+  function renderPlaces(selected) {
+    listEl.innerHTML = "";
+
+    selected.forEach(({ tier, place }) => {
+      const bubble = document.createElement("div");
+      bubble.className = "place-bubble";
+
+      const mapsUrl = buildMapsUrl(place);
+      const photoUrl = buildPhotoUrl(place);
+
+      // 上面：可複製連結列
+      const linkRow = document.createElement("div");
+      linkRow.className = "place-link-row";
+
+      const linkText = document.createElement("div");
+      linkText.className = "place-link";
+      linkText.textContent = mapsUrl;
+      linkText.onclick = () => window.open(mapsUrl, "_blank", "noopener");
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "btn-copy";
+      copyBtn.textContent = "複製連結";
+      copyBtn.onclick = async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(mapsUrl);
+          copyBtn.textContent = "已複製";
+          setTimeout(() => (copyBtn.textContent = "複製連結"), 1200);
+        } catch {
+          alert("複製失敗，請手動選取連結");
+        }
+      };
+
+      linkRow.appendChild(linkText);
+      linkRow.appendChild(copyBtn);
+
+      // 下方：預覽卡
+      const preview = document.createElement("div");
+      preview.className = "place-preview";
+
+      const info = document.createElement("div");
+      info.className = "place-info";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "place-name";
+      nameEl.textContent = place.displayName?.text || "店名未提供";
+
+      const addrEl = document.createElement("div");
+      addrEl.className = "place-address";
+      addrEl.textContent = place.formattedAddress || "地址未提供";
+
+      const metaEl = document.createElement("div");
+      metaEl.className = "place-meta";
+      const rating = place.rating ? `${place.rating.toFixed(1)}★` : "尚無評分";
+      metaEl.textContent = `${rating} · ${tierLabel(tier)}`;
+
+      info.appendChild(nameEl);
+      info.appendChild(addrEl);
+      info.appendChild(metaEl);
+
+      const imgEl = document.createElement("img");
+      imgEl.className = "place-photo";
+      if (photoUrl) {
+        imgEl.src = photoUrl;
+        imgEl.alt = place.displayName?.text || "餐廳照片";
+      }
+
+      preview.appendChild(info);
+      preview.appendChild(imgEl);
+
+      preview.onclick = () => window.open(mapsUrl, "_blank", "noopener");
+
+      bubble.appendChild(linkRow);
+      bubble.appendChild(preview);
+
+      listEl.appendChild(bubble);
+    });
+  }
+
+  async function fetchRestaurants() {
+    setStatus("正在載入附近店家…");
+    listEl.innerHTML = "";
+
+    try {
+      const all = await searchNearbyPlaces();
+      if (!all.length) {
+        setStatus("目前找不到符合條件的餐飲店。", true);
+        return;
+      }
+
+      const buckets = { TIER_1: [], TIER_2: [], TIER_3: [] };
+      all.forEach(p => {
+        const t = getTier(p);
+        buckets[t].push(p);
+      });
+
+      let selected = [];
+
+      if (currentMode === "duty") {
+        // 執行案件：只抽 0–200 元三間
+        if (!buckets.TIER_1.length) {
+          setStatus("附近沒有符合 0–200 元的餐飲店。", true);
+          return;
+        }
+        selected = randomPick(buckets.TIER_1, 3).map(p => ({ tier: "TIER_1", place: p }));
+      } else {
+        // 一般三餐：三個價位各抽一間（若有）
+        const order = ["TIER_1", "TIER_2", "TIER_3"];
+        order.forEach(t => {
+          if (buckets[t].length) {
+            const p = buckets[t][Math.floor(Math.random() * buckets[t].length)];
+            selected.push({ tier: t, place: p });
+          }
+        });
+      }
+
+      if (!selected.length) {
+        setStatus("資料不足，稍後再試。", true);
+        return;
+      }
+
+      // 價位低到高排序
+      const orderMap = { TIER_1: 1, TIER_2: 2, TIER_3: 3 };
+      selected.sort((a, b) => orderMap[a.tier] - orderMap[b.tier]);
+
+      renderPlaces(selected);
+      setStatus("已為你挑選三間餐飲店。");
+    } catch (e) {
+      console.error(e);
+      setStatus("載入失敗，請檢查 Places API 設定。", true);
+    }
+  }
+
+  async function initPlaces() {
+    try {
+      const { Place } = await google.maps.importLibrary("places");
+      PlaceAPI = Place;
+      fetchRestaurants();
+    } catch (e) {
+      console.error(e);
+      setStatus("無法初始化 Places API，請確認已啟用 Places API (New)。", true);
+    }
+  }
+
+  // 綁定按鈕
+  document.getElementById("btnBreakfast").onclick = () => { currentMode = "normal"; fetchRestaurants(); };
+  document.getElementById("btnLunch").onclick    = () => { currentMode = "normal"; fetchRestaurants(); };
+  document.getElementById("btnDinner").onclick   = () => { currentMode = "normal"; fetchRestaurants(); };
+  document.getElementById("btnDuty").onclick     = () => { currentMode = "duty";   fetchRestaurants(); };
+  document.getElementById("btnRefresh").onclick  = () => fetchRestaurants();
+
+  window.addEventListener("load", initPlaces);
+</script>
+
+</body>
+</html>
